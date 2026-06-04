@@ -153,7 +153,6 @@ export function BuilderPage() {
                 { value: 'on_consent_accept', label: 'When consent accepted' },
                 { value: 'after_preflight', label: 'After preflight passes' },
                 { value: 'on_first_task', label: 'On first task page' },
-                { value: 'manual', label: 'Manual (participant starts)' },
               ]}
             />
           </div>

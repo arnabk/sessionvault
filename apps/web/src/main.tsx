@@ -8,10 +8,14 @@ import { BuilderPage } from './admin/BuilderPage';
 import { SessionsPage } from './admin/SessionsPage';
 import { ReviewPage } from './admin/ReviewPage';
 import { SettingsPage } from './admin/SettingsPage';
+import { LoginPage } from './admin/LoginPage';
+import { TeamPage } from './admin/TeamPage';
+import { AccountPage } from './admin/AccountPage';
 import { TakePage } from './take/TakePage';
 
 const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/admin" replace /> },
+  { path: '/admin/login', element: <LoginPage /> },
   {
     path: '/admin',
     element: <AdminLayout />,
@@ -23,6 +27,8 @@ const router = createBrowserRouter([
       { path: 'sessions', element: <SessionsPage /> },
       { path: 'sessions/:id', element: <ReviewPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'team', element: <TeamPage /> },
+      { path: 'account', element: <AccountPage /> },
     ],
   },
   { path: '/take/:token', element: <TakePage /> },

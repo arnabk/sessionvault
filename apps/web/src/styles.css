@@ -279,7 +279,7 @@ tbody tr:last-child td { border-bottom: none; }
   display: flex; align-items: center; gap: 12px; padding: 13px 14px;
   border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 10px; background: var(--surface-2);
 }
-.check .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--faint); flex-shrink: 0; box-shadow: 0 0 0 3px rgba(0,0,0,0.03); transition: all 0.2s; }
+.check .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--faint); flex-shrink: 0; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); transition: all 0.2s; }
 .check .dot.ok { background: var(--green); box-shadow: 0 0 0 3px var(--green-weak); }
 .check .dot.bad { background: var(--red); box-shadow: 0 0 0 3px var(--red-weak); }
 .check .dot.pending { animation: pulse 1.6s ease-in-out infinite; }
@@ -287,6 +287,79 @@ tbody tr:last-child td { border-bottom: none; }
 
 .recdot { width: 9px; height: 9px; border-radius: 50%; background: var(--red); display: inline-block; margin-right: 8px; animation: blink 1.2s infinite; }
 @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+/* ---------- Take shell (full-height participant layout) ---------- */
+.take-shell {
+  min-height: 100vh; display: flex; flex-direction: column;
+  max-width: 720px; margin: 0 auto; background: var(--surface);
+  border-left: 1px solid var(--line); border-right: 1px solid var(--line);
+  box-shadow: 0 0 80px -40px rgba(16,24,40,0.25);
+}
+.take-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 28px; border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; background: var(--surface); z-index: 5;
+}
+.take-head .take-brand {
+  border: none; padding: 0; margin: 0; font-weight: 700; font-size: 16px;
+  display: flex; align-items: center; gap: 9px;
+}
+.take-head .take-brand::before { content: ''; width: 20px; height: 20px; border-radius: 6px; background: var(--brand); }
+.take-head .take-brand img + * { margin: 0; }
+.take-stepcount { font-size: 13px; color: var(--muted); font-weight: 500; }
+.take-stepper { display: flex; gap: 6px; padding: 14px 28px 0; }
+.take-stepper .seg { flex: 1; height: 4px; border-radius: 999px; background: var(--line-2); transition: background 0.25s; }
+.take-stepper .seg.done { background: var(--brand); opacity: 0.55; }
+.take-stepper .seg.current { background: var(--brand); }
+
+.take-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 36px 28px; }
+.take-inner { width: 100%; max-width: 540px; }
+.take-prose { white-space: pre-wrap; color: var(--ink-2); font-size: 15.5px; line-height: 1.65; margin-top: 12px; }
+
+.take-checks { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+.take-checks .check { padding: 14px 16px; }
+.check-main { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.check-name { font-weight: 500; }
+.check-state { font-size: 12.5px; color: var(--faint); }
+.check .dot.ok ~ .check-main .check-state { color: var(--green); }
+.check .dot.bad ~ .check-main .check-state { color: var(--red); }
+.take-checks .preview { margin-top: 4px; }
+
+.take-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 16px 28px; border-top: 1px solid var(--line);
+  position: sticky; bottom: 0; background: var(--surface);
+}
+.take-foot-note { font-size: 13px; color: var(--muted); }
+button.lg { padding: 12px 22px; font-size: 15px; border-radius: 10px; }
+
+.take-hero-icon {
+  width: 64px; height: 64px; border-radius: 18px; display: inline-flex;
+  align-items: center; justify-content: center; font-size: 28px; font-weight: 600;
+  background: var(--brand-weak); color: var(--brand);
+  box-shadow: 0 10px 24px -12px rgba(var(--brand-rgb), 0.6);
+}
+.take-hero-icon.ok { background: var(--green-weak); color: var(--green); box-shadow: 0 10px 24px -12px rgba(15,157,88,0.5); }
+.take-hero-icon.warn { background: var(--amber-weak); color: var(--amber); box-shadow: 0 10px 24px -12px rgba(183,121,31,0.5); }
+.take-hero-icon.spin { animation: hero-spin 1.1s linear infinite; }
+@keyframes hero-spin { to { transform: rotate(360deg); } }
+
+.take-bullets { list-style: none; padding: 0; margin: 20px 0 0; display: flex; flex-direction: column; gap: 12px; }
+.take-bullets li {
+  display: flex; align-items: center; gap: 12px; padding: 13px 15px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2);
+  font-size: 14.5px; color: var(--ink-2);
+}
+.take-bullets .bx { font-size: 18px; flex-shrink: 0; }
+.take-head .timer { display: inline-flex; align-items: center; gap: 8px; font-size: 20px; padding: 5px 12px; }
+.take-head .timer .recdot { margin: 0; }
+
+@media (max-width: 640px) {
+  .take-shell { border: none; }
+  .take-foot { flex-direction: column; align-items: stretch; }
+  .take-foot button.lg { width: 100%; }
+  .take-foot-note { text-align: center; }
+}
 
 /* ---------- Review player ---------- */
 .player-wrap {
@@ -334,6 +407,21 @@ input[type="color"] { border: 1px solid var(--line-2); border-radius: 8px; curso
 .brand-preview .bp-mark { width: 20px; height: 20px; border-radius: 6px; background: var(--brand); }
 .brand-preview p { padding: 0 16px; }
 .brand-preview button { margin: 0 16px 16px; }
+
+/* ---------- Auth / login ---------- */
+.auth-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.auth-card {
+  width: 100%; max-width: 400px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-lg); padding: 30px;
+}
+.auth-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; margin-bottom: 18px; }
+.auth-mark { width: 24px; height: 24px; border-radius: 7px; background: var(--brand); }
+.usermenu {
+  position: absolute; right: 0; top: calc(100% + 6px); min-width: 180px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: var(--shadow-lg); padding: 6px; display: flex; flex-direction: column; z-index: 30;
+}
+.usermenu button { justify-content: flex-start; text-align: left; width: 100%; }
 
 .fade-in { animation: fadeIn 0.28s ease both; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }

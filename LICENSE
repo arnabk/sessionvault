@@ -1,20 +1,21 @@
-                    GNU AFFERO GENERAL PUBLIC LICENSE
-                       Version 3, 19 November 2007
+MIT License
 
- Copyright (C) 2026 SessionVault contributors
+Copyright (c) 2026 SessionVault contributors
 
- Everyone is permitted to copy and distribute verbatim copies of this
- license document, but changing it is not allowed.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-SessionVault is licensed under the GNU Affero General Public License v3.0.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-This is a placeholder header. Replace the body of this file with the full text of
-the AGPL-3.0 license before publishing. The canonical text is available at:
-
-    https://www.gnu.org/licenses/agpl-3.0.txt
-
-Summary (non-binding):
-- You may use, study, modify, and self-host SessionVault freely.
-- If you run a modified version as a network service, you must offer the
-  corresponding source of your modified version to its users.
-- There is no warranty.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

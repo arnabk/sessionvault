@@ -292,7 +292,7 @@ Implemented with the AWS SDK v3 S3 client pointed at a configurable `endpoint` +
 
 **Single product, one deployable. No enterprise tier (dropped per scope decision).** All features ship in one image set; same artifact runs local Docker Compose and any K8s cluster.
 
-- **License:** Apache-2.0 (max adoption) or AGPL-3.0 (protect against closed SaaS forks). Default recommendation: **AGPL-3.0** for the SaaS, keeping self-hosting unrestricted.
+- **License:** **MIT** — maximum adoption, permissive, unrestricted self-hosting and commercial use.
 - **No paid gating** of SSO(OIDC), RBAC, customer-managed buckets, retention. Everything is in-core.
 
 ---

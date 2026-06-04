@@ -51,11 +51,14 @@ export const config = {
     defaultLinkTtlDays: envInt('SESSION_LINK_TTL_DAYS', 7),
   },
 
-  // Dev auth stub. Real OIDC is wired in a later phase (see ADR-0004/SPEC §8).
+  // Username/password auth. A default admin is seeded on first run.
   auth: {
-    devMode: env('AUTH_DEV_MODE', 'true') === 'true',
-    devUserEmail: env('AUTH_DEV_USER_EMAIL', 'admin@sessionvault.local'),
-    devOrgName: env('AUTH_DEV_ORG_NAME', 'Demo Org'),
+    orgName: env('AUTH_ORG_NAME', 'Demo Org'),
+    defaultAdminUsername: env('AUTH_DEFAULT_ADMIN_USERNAME', 'admin'),
+    defaultAdminPassword: env('AUTH_DEFAULT_ADMIN_PASSWORD', 'admin'),
+    cookieName: env('AUTH_COOKIE_NAME', 'sv_session'),
+    cookieSecure: env('AUTH_COOKIE_SECURE', 'false') === 'true',
+    sessionTtlDays: envInt('AUTH_SESSION_TTL_DAYS', 14),
   },
 } as const;
 

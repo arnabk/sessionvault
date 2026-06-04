@@ -1,19 +1,39 @@
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
     method,
+    credentials: 'include',
     headers: body ? { 'content-type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
     let detail: any = null;
     try { detail = await res.json(); } catch { /* ignore */ }
-    throw new Error(detail?.error || `${method} ${url} failed (${res.status})`);
+    // Prefer a human-friendly message; fall back to the error code, then status.
+    const msg = detail?.message || detail?.error || `${method} ${url} failed (${res.status})`;
+    throw new ApiError(msg, res.status);
   }
   return res.json() as Promise<T>;
 }
 
 export const api = {
-  me: () => req<any>('GET', '/api/me'),
+  // auth
+  me: () => req<any>('GET', '/api/auth/me'),
+  login: (username: string, password: string) => req<any>('POST', '/api/auth/login', { username, password }),
+  logout: () => req<any>('POST', '/api/auth/logout'),
+  changePassword: (current_password: string, new_password: string) =>
+    req<any>('POST', '/api/auth/change-password', { current_password, new_password }),
+  // users / team
+  listUsers: () => req<any>('GET', '/api/users'),
+  createUser: (b: unknown) => req<any>('POST', '/api/users', b),
+  deleteUser: (id: string) => req<any>('DELETE', `/api/users/${id}`),
   // templates
   listTemplates: () => req<any>('GET', '/api/templates'),
   getTemplate: (id: string) => req<any>('GET', `/api/templates/${id}`),

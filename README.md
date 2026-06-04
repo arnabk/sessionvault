@@ -98,4 +98,4 @@ Pre-alpha. Phase 1 (MVP) in progress. See the [roadmap](SPEC.md#14-implementatio
 
 ## License
 
-[AGPL-3.0](LICENSE). Self-hosting is unrestricted.
+[MIT](LICENSE). Use, modify, and self-host freely.
