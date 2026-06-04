@@ -131,6 +131,38 @@ backend instead:
    With external storage you no longer need the `/s3` proxy route — browsers talk
    to the provider directly via presigned URLs.
 
+### Direct-to-storage uploads and CORS
+
+> **How transfers work:** SessionVault uses **direct browser-to-storage**
+> transfers. The backend only issues short-lived **presigned URLs**; the actual
+> media bytes (recordings) are uploaded by the participant's browser straight to
+> S3/MinIO and downloaded by reviewers the same way. No media passes through the
+> API. This keeps the backend light and is what makes self-hosting cheap.
+
+Because the browser talks to storage directly, the **browser must be able to
+reach `S3_PUBLIC_ENDPOINT`**, and cross-origin requests need a **bucket CORS
+policy**:
+
+- **Bundled MinIO via Caddy `/s3`** — same origin as the app, so **no CORS setup
+  needed**. (Default; nothing to do.)
+- **External S3 / R2** — the bucket must allow `PUT` and `GET` from your app
+  origin. Example CORS rule for the bucket:
+
+  ```json
+  [
+    {
+      "AllowedOrigins": ["https://sessions.example.com"],
+      "AllowedMethods": ["GET", "PUT"],
+      "AllowedHeaders": ["*"],
+      "ExposeHeaders": ["ETag"],
+      "MaxAgeSeconds": 3000
+    }
+  ]
+  ```
+
+  Apply with `aws s3api put-bucket-cors` (S3) or the equivalent in the
+  Cloudflare R2 dashboard.
+
 Any S3 v4-signature endpoint works (AWS S3, R2, MinIO, Garage, …). See
 [`docs/architecture/storage.md`](../architecture/storage.md).
 
