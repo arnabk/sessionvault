@@ -1,5 +1,8 @@
 # Infra-only stack for local development. Run the API + web on the host with
 # `pnpm dev` while Postgres + MinIO run here. See docs/guides/local-dev.md.
+#
+# Ports are bound to 127.0.0.1 only, so these dev services are reachable from
+# this machine but NOT from other hosts on your network.
 services:
   postgres:
     image: postgres:16-alpine
@@ -8,7 +11,7 @@ services:
       POSTGRES_PASSWORD: sessionvault
       POSTGRES_DB: sessionvault
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -24,8 +27,8 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - miniodata:/data
     healthcheck:
