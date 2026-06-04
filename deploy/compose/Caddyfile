@@ -1,0 +1,32 @@
+# SessionVault reverse proxy with automatic HTTPS.
+#
+# Set SV_DOMAIN in your .env:
+#   - A real domain (e.g. sessions.example.com) -> Caddy obtains a Let's Encrypt
+#     certificate automatically over HTTP-01. Requires ports 80 + 443 reachable
+#     from the internet and a DNS A/AAAA record pointing at this host.
+#   - "localhost" (default) -> Caddy serves a locally-trusted self-signed cert.
+#
+# SV_TLS_EMAIL is used for Let's Encrypt expiry notices (recommended for prod).
+# To enable it, uncomment the global block below and set SV_TLS_EMAIL in .env:
+#   { email {$SV_TLS_EMAIL} }
+
+{$SV_DOMAIN:localhost} {
+	encode gzip zstd
+
+	# Expose the bundled MinIO under /s3/* so browsers can upload/download via
+	# presigned URLs over the same HTTPS origin. The app must set
+	# S3_PUBLIC_ENDPOINT=https://<domain>/s3 so presigned URLs target this path.
+	# (Omit / ignore this block when using external S3/R2.)
+	handle_path /s3/* {
+		reverse_proxy minio:9000 {
+			header_up Host {http.reverse_proxy.upstream.hostport}
+		}
+	}
+
+	# Everything else -> the SessionVault API (which also serves the SPA).
+	reverse_proxy api:8080 {
+		# Preserve the original host/scheme so the app can build correct links.
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+	}
+}

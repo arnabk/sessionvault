@@ -72,18 +72,25 @@ Anywhere you need to *send a link, enforce conditions, record what happens, and 
 - **Deploy anywhere** — one image set runs in local Docker Compose *and* any Kubernetes cluster.
 - **Privacy-first** — keep sensitive recordings on your own infrastructure.
 
-## Quick start (local)
+## Quick start
+
+Runs the whole stack (app + Postgres + MinIO) behind **Caddy with automatic HTTPS**:
 
 ```bash
-git clone <repo> sessionvault && cd sessionvault
-cp .env.example .env
-docker compose up
-# Admin:  http://localhost:8080/admin
-# Taker:  http://localhost:8080/take/<token>
-# MinIO:  http://localhost:9001 (console)
+git clone https://github.com/arnabk/sessionvault.git && cd sessionvault
+cp .env.example .env          # defaults are fine for localhost
+docker compose up -d --build
+# Admin:  https://localhost/admin   (login: admin / admin — change it!)
+# Taker:  https://localhost/take/<token>
 ```
 
-See [`docs/guides/local-dev.md`](docs/guides/local-dev.md) for the full walkthrough.
+`SV_DOMAIN=localhost` uses a self-signed cert (browser warning is expected).
+For a **public machine**, set `SV_DOMAIN` to your domain and SessionVault gets a
+free **Let's Encrypt** certificate automatically.
+
+See **[Deployment](docs/operations/deployment.md)** for public hosting, external
+S3/R2, backups, and config, and [Local development](docs/guides/local-dev.md) for
+the hot-reload dev workflow.
 
 ## Documentation
 
