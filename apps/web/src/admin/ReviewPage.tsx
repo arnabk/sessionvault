@@ -37,6 +37,12 @@ export function ReviewPage() {
   const s = data.session;
   const events: any[] = data.events;
   const annotations: any[] = data.annotations;
+  const segments: any[] = data.segments || [];
+  const tracks = Array.from(new Set(segments.map((x) => x.track)));
+  const firstScreen = segments.find((x) => x.track === 'screen') || segments[0];
+  const playUrl = firstScreen
+    ? `/api/sessions/${s.id}/media/${firstScreen.track}/${firstScreen.seq}`
+    : '';
   const durationMs = Math.max(
     ...events.map((e) => e.at_ms),
     ...annotations.map((a) => a.at_ms),
@@ -62,11 +68,25 @@ export function ReviewPage() {
         <div>
           <div className="card">
             <div className="player-wrap">
-              {/* Placeholder player surface. Real playback wires presigned segment URLs (SPEC §7). */}
-              <video ref={videoRef} className="main" controls poster="" data-testid="player">
-                <source src="" />
-              </video>
+              {playUrl ? (
+                <video ref={videoRef} className="main" controls src={playUrl} data-testid="player" />
+              ) : (
+                <div className="placeholder" data-testid="player-empty">No recording available</div>
+              )}
             </div>
+            {segments.length > 0 && (
+              <div className="row wrap" style={{ marginTop: 10 }}>
+                <span className="faint" style={{ fontSize: 12 }}>Tracks:</span>
+                {tracks.map((t) => {
+                  const segs = segments.filter((x) => x.track === t);
+                  return (
+                    <a key={t} href={`/api/sessions/${s.id}/media/${t}/${segs[0].seq}`} target="_blank" rel="noreferrer" className="tag">
+                      {t} ({segs.length})
+                    </a>
+                  );
+                })}
+              </div>
+            )}
             <div className="timeline" data-testid="timeline">
               {events.map((e) => (
                 <div

@@ -121,6 +121,36 @@ export async function del(key: string): Promise<void> {
   await internal.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
 }
 
+// ----- Proxy-through-backend transfer -------------------------------------
+// All media flows through the API: the browser never talks to storage directly.
+// This decouples the frontend from the storage vendor (ADR: server-proxied media).
+
+export async function putObject(
+  key: string,
+  body: Buffer,
+  contentType = 'application/octet-stream',
+): Promise<void> {
+  await internal.send(
+    new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: body, ContentType: contentType }),
+  );
+}
+
+export async function getObjectStream(
+  key: string,
+): Promise<{ body: NodeJS.ReadableStream; contentType?: string; contentLength?: number } | null> {
+  try {
+    const out = await internal.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+    if (!out.Body) return null;
+    return {
+      body: out.Body as unknown as NodeJS.ReadableStream,
+      contentType: out.ContentType,
+      contentLength: out.ContentLength,
+    };
+  } catch {
+    return null;
+  }
+}
+
 // Key convention: org/{org}/project/{project}/session/{session}/track/{track}/seg/{seq}.{ext}
 export function segmentKey(
   org: string,

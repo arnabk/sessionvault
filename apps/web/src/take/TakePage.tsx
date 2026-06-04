@@ -306,10 +306,8 @@ export function TakePage() {
           setHasLocal(true);
           const seq = (seqCounter as any)[track]++;
           try {
-            const pre = await takeApi.presign(token!, { track, seq, ext: 'webm' });
-            const res = await fetch(pre.url, { method: 'PUT', body: e.data });
-            if (!res.ok) throw new Error(`PUT ${res.status}`);
-            segmentsRef.current.push({ track, seq, storage_key: pre.storage_key, bytes: e.data.size });
+            const out = await takeApi.uploadSegment(token!, track, seq, e.data);
+            segmentsRef.current.push({ track, seq, storage_key: out.storage_key, bytes: out.bytes });
           } catch (err) {
             console.warn('upload failed', err);
             setUploadFailed(true);

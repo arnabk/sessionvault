@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { nanoid } from 'nanoid';
 import { query, withTx } from '../db/pool.js';
 import { requireAuth } from '../auth.js';
+import { getObjectStream } from '../storage/objectStore.js';
 import { config } from '../config.js';
 
 const issueSchema = z.object({
@@ -93,12 +94,36 @@ export async function sessionRoutes(app: FastifyInstance) {
       'SELECT * FROM annotations WHERE session_id=$1 ORDER BY at_ms',
       [id],
     );
+    const segments = await query(
+      'SELECT track, seq, bytes, duration_ms FROM segments WHERE session_id=$1 ORDER BY track, seq',
+      [id],
+    );
     return {
       session: s.rows[0],
       events: events.rows,
       artifacts: artifacts.rows,
       annotations: annotations.rows,
+      segments: segments.rows,
     };
+  });
+
+  // ----- Admin: stream a recorded segment through the API (proxy playback) -----
+  app.get('/api/sessions/:id/media/:track/:seq', async (req, reply) => {
+    const auth = await requireAuth(req);
+    const { id, track, seq } = req.params as { id: string; track: string; seq: string };
+    const owned = await query('SELECT 1 FROM sessions WHERE id=$1 AND org_id=$2', [id, auth.orgId]);
+    if (owned.rowCount === 0) return reply.code(404).send({ error: 'not_found' });
+    const segn = parseInt(seq, 10);
+    const segRow = await query(
+      'SELECT storage_key FROM segments WHERE session_id=$1 AND track=$2 AND seq=$3',
+      [id, track, segn],
+    );
+    if (segRow.rowCount === 0) return reply.code(404).send({ error: 'segment_not_found' });
+    const obj = await getObjectStream(segRow.rows[0].storage_key);
+    if (!obj) return reply.code(404).send({ error: 'object_missing' });
+    reply.header('content-type', obj.contentType || 'video/webm');
+    if (obj.contentLength) reply.header('content-length', String(obj.contentLength));
+    return reply.send(obj.body);
   });
 
   // ----- Admin: force-end -----

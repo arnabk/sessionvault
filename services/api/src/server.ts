@@ -17,7 +17,8 @@ import { uploadRoutes } from './routes/uploads.js';
 import { brandingRoutes } from './routes/branding.js';
 
 async function main() {
-  const app = Fastify({ logger: { level: 'info' } });
+  // 64MB body limit so media segments can be proxied through the API.
+  const app = Fastify({ logger: { level: 'info' }, bodyLimit: 64 * 1024 * 1024 });
   await app.register(cors, { origin: true, credentials: true });
   await app.register(cookie);
 

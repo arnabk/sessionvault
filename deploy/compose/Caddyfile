@@ -13,19 +13,10 @@
 {$SV_DOMAIN:localhost} {
 	encode gzip zstd
 
-	# Expose the bundled MinIO under /s3/* so browsers can upload/download via
-	# presigned URLs over the same HTTPS origin. The app must set
-	# S3_PUBLIC_ENDPOINT=https://<domain>/s3 so presigned URLs target this path.
-	# (Omit / ignore this block when using external S3/R2.)
-	handle_path /s3/* {
-		reverse_proxy minio:9000 {
-			header_up Host {http.reverse_proxy.upstream.hostport}
-		}
-	}
-
-	# Everything else -> the SessionVault API (which also serves the SPA).
+	# All traffic (UI, API, and media uploads/playback) goes to the SessionVault
+	# API. Media is proxied by the API to/from object storage, so the browser
+	# never talks to storage directly and no /s3 route is needed.
 	reverse_proxy api:8080 {
-		# Preserve the original host/scheme so the app can build correct links.
 		header_up X-Forwarded-Proto {scheme}
 		header_up X-Forwarded-Host {host}
 	}

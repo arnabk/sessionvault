@@ -82,8 +82,16 @@ export function applyBranding(b: Partial<Branding>) {
 export const takeApi = {
   resolve: (token: string) => req<any>('GET', `/take-api/${token}`),
   branding: (token: string) => req<any>('GET', `/take-api/${token}/branding`),
+  // Upload a segment THROUGH our API (server proxies it to storage).
+  uploadSegment: async (token: string, track: string, seq: number, blob: Blob) => {
+    const res = await fetch(
+      `/take-api/${token}/uploads?track=${encodeURIComponent(track)}&seq=${seq}&ext=webm`,
+      { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: blob },
+    );
+    if (!res.ok) throw new ApiError(`upload failed (${res.status})`, res.status);
+    return res.json() as Promise<{ ok: boolean; storage_key: string; bytes: number }>;
+  },
   start: (token: string) => req<any>('POST', `/take-api/${token}/start`),
   event: (token: string, b: unknown) => req<any>('POST', `/take-api/${token}/events`, b),
-  presign: (token: string, b: unknown) => req<any>('POST', `/take-api/${token}/uploads/presign`, b),
   finalize: (token: string, b: unknown) => req<any>('POST', `/take-api/${token}/finalize`, b),
 };
