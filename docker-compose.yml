@@ -18,11 +18,15 @@ services:
     restart: unless-stopped
     depends_on:
       - api
+    # Default ports 80 (HTTP-01 ACME + redirect) and 443 (HTTPS). To serve HTTPS
+    # on a custom port, set SV_HTTPS_PORT (and SV_HTTPS_SITE=domain:port). Keep
+    # the 80 mapping unless you use TLS-ALPN-01 or DNS-01 for certificates.
     ports:
-      - "80:80"
-      - "443:443"
+      - "${SV_HTTP_PORT:-80}:80"
+      - "${SV_HTTPS_PORT:-443}:${SV_HTTPS_PORT:-443}"
     environment:
       SV_DOMAIN: ${SV_DOMAIN:-localhost}
+      SV_HTTPS_SITE: ${SV_HTTPS_SITE:-}
       SV_TLS_EMAIL: ${SV_TLS_EMAIL:-}
     volumes:
       - caddy_data:/data

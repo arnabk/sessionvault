@@ -10,7 +10,17 @@
 # To enable it, uncomment the global block below and set SV_TLS_EMAIL in .env:
 #   { email {$SV_TLS_EMAIL} }
 
-{$SV_DOMAIN:localhost} {
+# Listen address/port. Default :443 (standard HTTPS). To serve on a custom
+# HTTPS port set SV_HTTPS_SITE, e.g. "sessions.example.com:8443".
+#
+# Certificate challenge notes:
+#   - HTTP-01 (default) needs port 80 reachable from the internet.
+#   - On a custom port with no port 80, switch to TLS-ALPN-01 or DNS-01 by
+#     uncommenting a global block:
+#       { acme_dns cloudflare {$CF_API_TOKEN} }      # DNS-01 (no inbound ports)
+#     or disable HTTP-01:
+#       { servers { protocols h1 h2 } }  +  tls { } using on-demand/alpn
+{$SV_HTTPS_SITE:{$SV_DOMAIN:localhost}} {
 	encode gzip zstd
 
 	# All traffic (UI, API, and media uploads/playback) goes to the SessionVault

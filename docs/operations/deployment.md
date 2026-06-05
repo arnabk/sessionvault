@@ -58,7 +58,6 @@ To host SessionVault on a public machine with a trusted certificate:
    SV_DOMAIN=sessions.example.com
    SV_TLS_EMAIL=you@example.com         # optional but recommended
    PUBLIC_BASE_URL=https://sessions.example.com
-   S3_PUBLIC_ENDPOINT=https://sessions.example.com/s3
    AUTH_COOKIE_SECURE=true
    AUTH_DEFAULT_ADMIN_PASSWORD=<a-strong-password>
    POSTGRES_PASSWORD=<a-strong-password>
@@ -97,8 +96,7 @@ All configuration is environment-driven (see `.env.example`). Key variables:
 | `SV_TLS_EMAIL`                | _(empty)_              | Let's Encrypt contact (optional). |
 | `PUBLIC_BASE_URL`             | `https://localhost`    | Base URL used to build participant links. Must match your domain. |
 | `POSTGRES_PASSWORD`           | `sessionvault`         | **Change in production.** |
-| `S3_ENDPOINT`                 | `http://minio:9000`    | In-cluster storage endpoint (server → storage). |
-| `S3_PUBLIC_ENDPOINT`          | `https://localhost/s3` | Browser-facing storage endpoint for presigned URLs. |
+| `S3_ENDPOINT`                 | `http://minio:9000`    | Storage endpoint the **server** uses. Browsers never touch storage. |
 | `S3_ACCESS_KEY_ID`            | `minioadmin`           | Storage access key. |
 | `S3_SECRET_ACCESS_KEY`        | `minioadmin`           | **Change in production.** |
 | `S3_BUCKET`                   | `sessionvault`         | Bucket name (created automatically on MinIO). |
@@ -108,6 +106,28 @@ All configuration is environment-driven (see `.env.example`). Key variables:
 | `AUTH_COOKIE_SECURE`          | `true`                 | Send session cookie only over HTTPS. Keep `true` in production. |
 | `AUTH_SESSION_TTL_DAYS`       | `14`                   | Login session lifetime. |
 | `SESSION_LINK_TTL_DAYS`       | `7`                    | Default participant-link expiry. |
+| `SV_HTTP_PORT`                | `80`                   | Host port mapped to Caddy's HTTP listener (ACME + redirect). |
+| `SV_HTTPS_PORT`               | `443`                  | Host port for HTTPS. Set to e.g. `8443` to serve on a custom port. |
+| `SV_HTTPS_SITE`               | _(empty)_              | Override the site address, e.g. `sessions.example.com:8443`. |
+
+### Serving HTTPS on a non-standard port
+
+You can serve HTTPS on any port (e.g. `https://sessions.example.com:8443`):
+
+```ini
+SV_HTTPS_PORT=8443
+SV_HTTPS_SITE=sessions.example.com:8443
+PUBLIC_BASE_URL=https://sessions.example.com:8443
+```
+
+**Certificate caveat:** obtaining a Let's Encrypt cert still needs a reachable
+challenge endpoint:
+
+- **HTTP-01 (default)** requires **port 80** open to the internet (keep
+  `SV_HTTP_PORT=80`). The cert is then used on whatever HTTPS port you choose.
+- If port 80 is unavailable, use **DNS-01** (no inbound ports — proves ownership
+  via a DNS TXT record) by adding a global `acme_dns` block to the `Caddyfile`
+  with your DNS provider plugin, or **TLS-ALPN-01** (port 443 only).
 
 ---
 
@@ -121,47 +141,28 @@ backend instead:
 
    ```ini
    S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com
-   S3_PUBLIC_ENDPOINT=https://<account>.r2.cloudflarestorage.com
    S3_ACCESS_KEY_ID=<key>
    S3_SECRET_ACCESS_KEY=<secret>
    S3_BUCKET=sessionvault
    S3_FORCE_PATH_STYLE=false
    ```
 
-   With external storage you no longer need the `/s3` proxy route — browsers talk
-   to the provider directly via presigned URLs.
+> **Switching vendor is server-only.** Because all media is proxied through the
+> API (below), you change **just these `S3_*` variables** to move between MinIO,
+> AWS S3, Cloudflare R2, Garage, etc. No frontend changes, no CORS, no public
+> storage endpoint.
 
-### Direct-to-storage uploads and CORS
+### How media transfers work (server-proxied)
 
-> **How transfers work:** SessionVault uses **direct browser-to-storage**
-> transfers. The backend only issues short-lived **presigned URLs**; the actual
-> media bytes (recordings) are uploaded by the participant's browser straight to
-> S3/MinIO and downloaded by reviewers the same way. No media passes through the
-> API. This keeps the backend light and is what makes self-hosting cheap.
-
-Because the browser talks to storage directly, the **browser must be able to
-reach `S3_PUBLIC_ENDPOINT`**, and cross-origin requests need a **bucket CORS
-policy**:
-
-- **Bundled MinIO via Caddy `/s3`** — same origin as the app, so **no CORS setup
-  needed**. (Default; nothing to do.)
-- **External S3 / R2** — the bucket must allow `PUT` and `GET` from your app
-  origin. Example CORS rule for the bucket:
-
-  ```json
-  [
-    {
-      "AllowedOrigins": ["https://sessions.example.com"],
-      "AllowedMethods": ["GET", "PUT"],
-      "AllowedHeaders": ["*"],
-      "ExposeHeaders": ["ETag"],
-      "MaxAgeSeconds": 3000
-    }
-  ]
-  ```
-
-  Apply with `aws s3api put-bucket-cors` (S3) or the equivalent in the
-  Cloudflare R2 dashboard.
+> SessionVault **proxies all media through the API**. The participant's browser
+> uploads each recording segment to the SessionVault API, and the API writes it
+> to object storage. Reviewers stream recordings back through the API. **The
+> browser never talks to storage directly.**
+>
+> Benefits: the storage vendor is fully decoupled from the frontend, there is no
+> CORS to configure, no public storage endpoint to expose, and credentials never
+> leave the server. Tradeoff: media bytes transit the API, so for very high
+> volume you'll want multiple API replicas (see [Scaling](./scaling.md)).
 
 Any S3 v4-signature endpoint works (AWS S3, R2, MinIO, Garage, …). See
 [`docs/architecture/storage.md`](../architecture/storage.md).
