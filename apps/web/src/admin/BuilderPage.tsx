@@ -1,26 +1,61 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
-import { Select } from '../ui/Select';
 import { RichText } from '../ui/RichText';
 
-type StepType = 'welcome' | 'consent' | 'preflight' | 'task' | 'finish';
+// Simplified model: every step is a task (content page). Capture requirements
+// and the consent notice are configured once at the flow level.
 interface Step {
-  type: StepType;
   title: string;
   body_md: string;
-  required: boolean;
-  config: Record<string, any>;
+}
+
+interface Capture {
+  camera: boolean;
+  screen: boolean;
+  fullDesktop: boolean;
+  mic: boolean;
 }
 
 const DEFAULT_STEPS: Step[] = [
-  { type: 'consent', title: 'Consent', body_md: 'We will record your screen and camera.', required: true, config: {} },
-  { type: 'preflight', title: 'Device checks', body_md: '', required: true, config: { camera: true, screen: true, fullDesktop: true, mic: false } },
-  { type: 'task', title: 'Your task', body_md: 'Describe the task here.', required: true, config: {} },
-  { type: 'finish', title: 'All done', body_md: 'Thank you for completing the session.', required: true, config: {} },
+  { title: 'Your task', body_md: '<p>Describe the task here.</p>' },
 ];
 
-const STEP_TYPES: StepType[] = ['welcome', 'consent', 'preflight', 'task', 'finish'];
+const DEFAULT_CONSENT = 'This session records your screen and camera. By continuing you agree to be recorded for review.';
+
+// Convert an old typed-step template into the task-only model.
+function migrateSteps(rawSteps: any[]): { steps: Step[]; capture: Capture; consent: string } {
+  let capture: Capture = { camera: false, screen: false, fullDesktop: false, mic: false };
+  let consent = '';
+  const steps: Step[] = [];
+  for (const s of rawSteps) {
+    const type = s.type ?? 'task';
+    if (type === 'preflight') {
+      capture = {
+        camera: !!s.config?.camera,
+        screen: !!s.config?.screen,
+        fullDesktop: !!s.config?.fullDesktop,
+        mic: !!s.config?.mic,
+      };
+      continue;
+    }
+    if (type === 'consent') {
+      consent = s.body_md || DEFAULT_CONSENT;
+      continue;
+    }
+    if (type === 'finish' || type === 'welcome') {
+      // welcome/finish are now automatic; drop them as standalone steps.
+      continue;
+    }
+    steps.push({ title: s.title || 'Task', body_md: s.body_md || '' });
+  }
+  if (steps.length === 0) steps.push(...DEFAULT_STEPS);
+  // If nothing captured was set on an old flow, default to camera+screen.
+  if (!capture.camera && !capture.screen && !capture.mic) {
+    capture = { camera: true, screen: true, fullDesktop: true, mic: false };
+  }
+  return { steps, capture, consent: consent || DEFAULT_CONSENT };
+}
 
 export function BuilderPage() {
   const { id } = useParams();
@@ -29,47 +64,47 @@ export function BuilderPage() {
   const [steps, setSteps] = useState<Step[]>(DEFAULT_STEPS);
   const [active, setActive] = useState(0);
   const [timerMin, setTimerMin] = useState(30);
-  const [recordingStart, setRecordingStart] = useState('after_preflight');
-  const [timerStart, setTimerStart] = useState('on_recording_start');
+  const [consent, setConsent] = useState(DEFAULT_CONSENT);
+  const [capture, setCapture] = useState<Capture>({ camera: true, screen: true, fullDesktop: true, mic: false });
   const [err, setErr] = useState('');
   const [savedId, setSavedId] = useState<string | null>(id ?? null);
-
+  const [savedFlash, setSavedFlash] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     api.getTemplate(id).then((d) => {
       setName(d.template.name);
       setTimerMin(Math.round((d.template.flow_config?.totalTimerSeconds ?? 1800) / 60));
-      setRecordingStart(d.template.flow_config?.recordingStart ?? 'after_preflight');
-      setTimerStart(d.template.flow_config?.timerStart ?? 'on_recording_start');
-      setSteps(d.steps.map((s: any) => ({ type: s.type, title: s.title, body_md: s.body_md, required: s.required, config: s.config })));
+      const fc = d.template.flow_config ?? {};
+      // Prefer the new flow-level fields; otherwise migrate old typed steps.
+      if (fc.capture || fc.consentText !== undefined) {
+        setCapture({
+          camera: !!fc.capture?.camera,
+          screen: !!fc.capture?.screen,
+          fullDesktop: !!fc.capture?.fullDesktop,
+          mic: !!fc.capture?.mic,
+        });
+        setConsent(fc.consentText ?? DEFAULT_CONSENT);
+        setSteps(d.steps.map((s: any) => ({ title: s.title, body_md: s.body_md })));
+      } else {
+        const m = migrateSteps(d.steps);
+        setCapture(m.capture);
+        setConsent(m.consent);
+        setSteps(m.steps);
+      }
       setSavedId(id);
     }).catch((e) => setErr(e.message));
   }, [id]);
 
   function patchStep(i: number, patch: Partial<Step>) {
-    setSteps((prev) =>
-      prev.map((s, idx) => {
-        if (idx !== i) return s;
-        const merged = { ...s, ...patch };
-        // When a step becomes a preflight with no checks configured, seed sane
-        // defaults so it actually gates permissions (avoids an empty preflight
-        // that silently passes).
-        if (patch.type === 'preflight' && Object.keys(merged.config || {}).length === 0) {
-          merged.config = { camera: true, screen: true, fullDesktop: true, mic: false };
-        }
-        return merged;
-      }),
-    );
-  }
-  function patchConfig(i: number, key: string, val: any) {
-    setSteps((prev) => prev.map((s, idx) => (idx === i ? { ...s, config: { ...s.config, [key]: val } } : s)));
+    setSteps((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
   }
   function addStep() {
-    setSteps((prev) => [...prev, { type: 'task', title: 'New step', body_md: '', required: true, config: {} }]);
+    setSteps((prev) => [...prev, { title: `Task ${prev.length + 1}`, body_md: '' }]);
     setActive(steps.length);
   }
   function removeStep(i: number) {
+    if (steps.length === 1) return; // keep at least one step
     setSteps((prev) => prev.filter((_, idx) => idx !== i));
     setActive(0);
   }
@@ -83,23 +118,33 @@ export function BuilderPage() {
     });
     setActive(j);
   }
+  function toggleCapture(k: keyof Capture, v: boolean) {
+    setCapture((c) => {
+      const next = { ...c, [k]: v };
+      if (k === 'screen' && !v) next.fullDesktop = false;
+      if (k === 'fullDesktop' && v) next.screen = true;
+      return next;
+    });
+  }
 
   function payload() {
+    // Persist as task-only steps; capture + consent live on flow_config. We also
+    // emit a synthetic preflight/consent-free snapshot for the backend.
     return {
       name,
       flow_config: {
-        recordingStart,
-        timerStart,
+        capture,
+        consentText: consent,
         timerMode: 'total',
         totalTimerSeconds: timerMin * 60,
+        recordingStart: 'after_preflight',
+        timerStart: 'on_recording_start',
         navigation: 'linear',
         endTriggers: ['submit', 'timeout', 'permission_loss', 'force_end'],
       },
-      steps,
+      steps: steps.map((s) => ({ type: 'task', title: s.title, body_md: s.body_md, required: true, config: {} })),
     };
   }
-
-  const [savedFlash, setSavedFlash] = useState(false);
 
   async function save(done = false) {
     setErr('');
@@ -147,7 +192,7 @@ export function BuilderPage() {
           <input value={name} onChange={(e) => setName(e.target.value)} data-testid="template-name" />
         </div>
         <div className="row wrap">
-          <div className="field" style={{ width: 180 }}>
+          <div className="field" style={{ width: 200 }}>
             <label>Total timer (minutes)</label>
             <input
               type="number"
@@ -156,51 +201,56 @@ export function BuilderPage() {
               data-testid="timer-min"
             />
           </div>
-          <div className="field" style={{ width: 280 }}>
-            <label>Recording starts</label>
-            <Select
-              testId="recording-start"
-              value={recordingStart}
-              onChange={setRecordingStart}
-              options={[
-                { value: 'on_consent_accept', label: 'When consent accepted' },
-                { value: 'after_preflight', label: 'After preflight passes' },
-                { value: 'on_first_task', label: 'On first task page' },
-              ]}
-            />
+          <div className="field" style={{ flex: 1, minWidth: 280 }}>
+            <label>Required permissions (checked before the session starts)</label>
+            <div className="row wrap" style={{ gap: 14 }}>
+              {([
+                ['camera', 'Camera'],
+                ['screen', 'Screen share'],
+                ['fullDesktop', 'Full desktop only'],
+                ['mic', 'Microphone'],
+              ] as [keyof Capture, string][]).map(([k, label]) => (
+                <label key={k} className="row" style={{ gap: 7 }}>
+                  <input
+                    type="checkbox"
+                    style={{ width: 'auto' }}
+                    checked={capture[k]}
+                    onChange={(e) => toggleCapture(k, e.target.checked)}
+                    data-testid={`capture-${k}`}
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
           </div>
-          <div className="field" style={{ width: 280 }}>
-            <label>Timer starts</label>
-            <Select
-              testId="timer-start"
-              value={timerStart}
-              onChange={setTimerStart}
-              options={[
-                { value: 'on_recording_start', label: 'When recording starts' },
-                { value: 'on_first_task', label: 'On first task page' },
-              ]}
-            />
-          </div>
+        </div>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>Consent notice (shown before the session starts)</label>
+          <textarea
+            value={consent}
+            onChange={(e) => setConsent(e.target.value)}
+            data-testid="consent-text"
+            style={{ minHeight: 60 }}
+          />
         </div>
       </div>
 
       <div className="grid2">
         <div className="card">
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
-            <strong>Steps ({steps.length})</strong>
-            <button onClick={addStep} data-testid="add-step">+ Add</button>
+            <strong>Tasks ({steps.length})</strong>
+            <button onClick={addStep} data-testid="add-step">+ Add task</button>
           </div>
           <ul className="steplist">
             {steps.map((st, i) => (
               <li key={i} className={i === active ? 'active' : ''} onClick={() => setActive(i)} data-testid="step-item">
                 <span>
-                  <span className="tag">{st.type}</span>
-                  <span className="step-title">{st.title}</span>
+                  <span className="step-title">{st.title || 'Untitled task'}</span>
                 </span>
                 <span className="step-actions">
                   <button className="sm" title="Move up" onClick={(e) => { e.stopPropagation(); move(i, -1); }}>↑</button>
                   <button className="sm" title="Move down" onClick={(e) => { e.stopPropagation(); move(i, 1); }}>↓</button>
-                  <button className="sm x" title="Remove" onClick={(e) => { e.stopPropagation(); removeStep(i); }}>✕</button>
+                  <button className="sm x" title="Remove" disabled={steps.length === 1} onClick={(e) => { e.stopPropagation(); removeStep(i); }}>✕</button>
                 </span>
               </li>
             ))}
@@ -211,51 +261,21 @@ export function BuilderPage() {
           {s ? (
             <>
               <div className="field">
-                <label>Step type</label>
-                <Select
-                  testId="step-type"
-                  value={s.type}
-                  onChange={(v) => patchStep(active, { type: v as StepType })}
-                  options={STEP_TYPES.map((t) => ({ value: t, label: t }))}
-                />
-              </div>
-              <div className="field">
-                <label>Title</label>
+                <label>Task title</label>
                 <input value={s.title} onChange={(e) => patchStep(active, { title: e.target.value })} data-testid="step-title" />
               </div>
-              <div className="field">
-                <label>Body</label>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label>Instructions</label>
                 <RichText
                   value={s.body_md}
                   onChange={(html) => patchStep(active, { body_md: html })}
-                  placeholder="Write the instructions for this step…"
+                  placeholder="Write the instructions for this task…"
                   testId="step-body"
                 />
               </div>
-              {s.type === 'preflight' && (
-                <div className="field">
-                  <label>Required permissions</label>
-                  {['camera', 'screen', 'fullDesktop', 'mic'].map((k) => (
-                    <label key={k} className="row" style={{ marginBottom: 6 }}>
-                      <input
-                        type="checkbox"
-                        style={{ width: 'auto' }}
-                        checked={!!s.config[k]}
-                        onChange={(e) => patchConfig(active, k, e.target.checked)}
-                        data-testid={`preflight-${k}`}
-                      />
-                      <span>{k === 'fullDesktop' ? 'Require full desktop (not a tab/window)' : k}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-              <label className="row" style={{ marginTop: 8 }}>
-                <input type="checkbox" style={{ width: 'auto' }} checked={s.required} onChange={(e) => patchStep(active, { required: e.target.checked })} />
-                <span>Required to advance</span>
-              </label>
             </>
           ) : (
-            <p className="muted">Add a step to begin.</p>
+            <p className="muted">Add a task to begin.</p>
           )}
         </div>
       </div>

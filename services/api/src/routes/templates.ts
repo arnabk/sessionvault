@@ -12,9 +12,20 @@ const stepSchema = z.object({
 });
 
 const flowConfigSchema = z.object({
-  recordingStart: z.string().default('after_preflight'), // after_preflight|on_consent_accept|on_step_enter|manual
+  // Task-only model: capture requirements + consent live at the flow level.
+  capture: z
+    .object({
+      camera: z.boolean().default(false),
+      screen: z.boolean().default(false),
+      fullDesktop: z.boolean().default(false),
+      mic: z.boolean().default(false),
+    })
+    .partial()
+    .optional(),
+  consentText: z.string().optional(),
+  recordingStart: z.string().default('after_preflight'),
   recordingStartStep: z.number().int().nullable().default(null),
-  timerStart: z.string().default('on_recording_start'), // on_recording_start|on_first_task|on_step_enter|manual
+  timerStart: z.string().default('on_recording_start'),
   timerStartStep: z.number().int().nullable().default(null),
   timerMode: z.literal('total').default('total'),
   totalTimerSeconds: z.number().int().positive().default(1800),

@@ -21,6 +21,60 @@ interface Flow {
   }>;
 }
 
+// Build the runtime step sequence (consent → preflight → tasks) from either the
+// new task-only model (flow_config.capture + consentText) or an old typed flow.
+function normalizeFlow(flow: any): Flow {
+  const fc = flow?.flow_config ?? {};
+  const rawSteps: any[] = flow?.steps ?? [];
+  const isNew = !!fc.capture || fc.consentText !== undefined;
+
+  if (!isNew) {
+    // Old typed flow: trust it, but ensure required/config defaults exist.
+    return {
+      flow_config: {
+        recordingStart: fc.recordingStart ?? 'after_preflight',
+        timerStart: fc.timerStart ?? 'on_recording_start',
+        totalTimerSeconds: fc.totalTimerSeconds ?? 1800,
+      },
+      steps: rawSteps.map((s) => ({
+        type: s.type ?? 'task',
+        title: s.title ?? '',
+        body_md: s.body_md ?? '',
+        required: true,
+        config: s.config ?? {},
+      })),
+    };
+  }
+
+  const cap = fc.capture ?? {};
+  const steps: Flow['steps'] = [];
+  if (fc.consentText) {
+    steps.push({ type: 'consent', title: 'Consent & recording notice', body_md: fc.consentText, required: true, config: {} });
+  }
+  if (cap.camera || cap.screen || cap.mic) {
+    steps.push({
+      type: 'preflight',
+      title: 'Device checks',
+      body_md: '',
+      required: true,
+      config: { camera: !!cap.camera, screen: !!cap.screen, fullDesktop: !!cap.fullDesktop, mic: !!cap.mic },
+    });
+  }
+  const tasks = rawSteps.length
+    ? rawSteps.map((s) => ({ type: 'task' as const, title: s.title ?? 'Task', body_md: s.body_md ?? '', required: true, config: {} }))
+    : [{ type: 'task' as const, title: 'Task', body_md: '', required: true, config: {} }];
+  steps.push(...tasks);
+
+  return {
+    flow_config: {
+      recordingStart: 'after_preflight',
+      timerStart: 'on_recording_start',
+      totalTimerSeconds: fc.totalTimerSeconds ?? 1800,
+    },
+    steps,
+  };
+}
+
 export function TakePage() {
   const { token } = useParams();
   const [phase, setPhase] = useState<Phase>('loading');
@@ -70,9 +124,10 @@ export function TakePage() {
     takeApi
       .resolve(token)
       .then((d) => {
-        setInfo({ flow: d.flow, participant_name: d.participant_name });
-        fullDesktopRequiredRef.current = (d.flow?.steps || []).some(
-          (st: any) => st.type === 'preflight' && st.config?.fullDesktop,
+        const flow = normalizeFlow(d.flow);
+        setInfo({ flow, participant_name: d.participant_name });
+        fullDesktopRequiredRef.current = flow.steps.some(
+          (st) => st.type === 'preflight' && st.config?.fullDesktop,
         );
         detectScreens();
         setPhase('welcome');
@@ -548,6 +603,7 @@ export function TakePage() {
   const steps = info!.flow.steps;
   const totalSteps = steps.length;
   const preflightReady = step.type !== 'preflight' || preflightPassed();
+  const isLastStep = stepIdx === totalSteps - 1 && step.type !== 'finish';
 
   function dotLabel(s: CheckState) {
     return s === 'ok' ? 'Granted' : s === 'bad' ? 'Blocked' : 'Pending';
@@ -680,6 +736,15 @@ export function TakePage() {
         </span>
         {step.type === 'finish' ? (
           <button className="primary lg" onClick={() => finalize('submit')} data-testid="finish-submit">
+            Submit session
+          </button>
+        ) : isLastStep ? (
+          <button
+            className="primary lg"
+            disabled={!preflightReady}
+            onClick={advance}
+            data-testid="finish-submit"
+          >
             Submit session
           </button>
         ) : (
