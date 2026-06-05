@@ -48,7 +48,19 @@ export function BuilderPage() {
   }, [id]);
 
   function patchStep(i: number, patch: Partial<Step>) {
-    setSteps((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+    setSteps((prev) =>
+      prev.map((s, idx) => {
+        if (idx !== i) return s;
+        const merged = { ...s, ...patch };
+        // When a step becomes a preflight with no checks configured, seed sane
+        // defaults so it actually gates permissions (avoids an empty preflight
+        // that silently passes).
+        if (patch.type === 'preflight' && Object.keys(merged.config || {}).length === 0) {
+          merged.config = { camera: true, screen: true, fullDesktop: true, mic: false };
+        }
+        return merged;
+      }),
+    );
   }
   function patchConfig(i: number, key: string, val: any) {
     setSteps((prev) => prev.map((s, idx) => (idx === i ? { ...s, config: { ...s.config, [key]: val } } : s)));

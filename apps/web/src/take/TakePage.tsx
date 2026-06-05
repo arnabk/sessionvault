@@ -380,12 +380,21 @@ export function TakePage() {
     });
   }
 
+  // Does the flow have any captured media to record? (a preflight requiring
+  // camera or screen). If so, recording MUST start before the finish step.
+  function flowRequiresCapture(): boolean {
+    return (info?.flow.steps || []).some(
+      (s) => s.type === 'preflight' && (s.config?.camera || s.config?.screen),
+    );
+  }
+
   async function advance() {
     if (!info) return;
     if (step?.type === 'preflight' && !preflightPassed()) return;
     logEvent('step_advance', { from: stepIdx });
     const next = stepIdx + 1;
     const nextStep = info.flow.steps[next];
+    const enteringFinish = !nextStep || nextStep.type === 'finish';
 
     // Recording-start anchor logic.
     const ra = info.flow.flow_config.recordingStart;
@@ -395,8 +404,15 @@ export function TakePage() {
       else if (ra === 'on_first_task' && nextStep?.type === 'task') await startRecording();
     }
 
-    if (!nextStep || nextStep.type === 'finish') {
-      // entering the finish step
+    // Safety net: never reach the finish step without recording when the flow
+    // captures media but the configured anchor never fired (e.g. no task step,
+    // or an anchor that doesn't match this flow's shape). This prevents the
+    // session from jumping to the end without ever recording.
+    if (!recording && enteringFinish && flowRequiresCapture() && (screenStreamsRef.current.length || camStreamRef.current)) {
+      await startRecording();
+    }
+
+    if (enteringFinish) {
       if (nextStep?.type === 'finish') setStepIdx(next);
       else await finalize('submit');
       return;
