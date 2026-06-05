@@ -20,14 +20,11 @@
 #       { acme_dns cloudflare {$CF_API_TOKEN} }      # DNS-01 (no inbound ports)
 #     or disable HTTP-01:
 #       { servers { protocols h1 h2 } }  +  tls { } using on-demand/alpn
-{$SV_HTTPS_SITE:{$SV_DOMAIN:localhost}} {
+{$SV_HTTPS_SITE} {
 	encode gzip zstd
 
 	# All traffic (UI, API, and media uploads/playback) goes to the SessionVault
 	# API. Media is proxied by the API to/from object storage, so the browser
 	# never talks to storage directly and no /s3 route is needed.
-	reverse_proxy api:8080 {
-		header_up X-Forwarded-Proto {scheme}
-		header_up X-Forwarded-Host {host}
-	}
+	reverse_proxy api:8080
 }

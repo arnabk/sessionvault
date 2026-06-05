@@ -26,7 +26,7 @@ services:
       - "${SV_HTTPS_PORT:-443}:${SV_HTTPS_PORT:-443}"
     environment:
       SV_DOMAIN: ${SV_DOMAIN:-localhost}
-      SV_HTTPS_SITE: ${SV_HTTPS_SITE:-}
+      SV_HTTPS_SITE: ${SV_HTTPS_SITE:-${SV_DOMAIN:-localhost}}
       SV_TLS_EMAIL: ${SV_TLS_EMAIL:-}
     volumes:
       - caddy_data:/data
