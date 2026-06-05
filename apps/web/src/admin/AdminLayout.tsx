@@ -17,6 +17,15 @@ export function AdminLayout() {
   const [checked, setChecked] = useState(false);
   const [menu, setMenu] = useState(false);
 
+  async function refreshMe() {
+    try {
+      const m = await api.me();
+      setMe(m);
+    } catch (e: any) {
+      if (e.status === 401) nav('/admin/login', { replace: true });
+    }
+  }
+
   useEffect(() => {
     api.me()
       .then((m) => {
@@ -76,7 +85,7 @@ export function AdminLayout() {
         </div>
       )}
       <div className="container">
-        <Outlet context={me} />
+        <Outlet context={{ me, refreshMe }} />
       </div>
     </div>
   );

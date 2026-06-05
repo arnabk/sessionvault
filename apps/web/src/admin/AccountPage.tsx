@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { api } from '../api';
 
 export function AccountPage() {
+  const { refreshMe } = useOutletContext<{ refreshMe: () => Promise<void> }>();
   const [cur, setCur] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -16,6 +18,8 @@ export function AccountPage() {
       await api.changePassword(cur, next);
       setOk(true);
       setCur(''); setNext(''); setConfirm('');
+      // Clear the "using default password" banner in the layout.
+      await refreshMe();
     } catch (e: any) {
       setErr(e.message);
     }
