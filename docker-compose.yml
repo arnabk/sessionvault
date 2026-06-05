@@ -80,8 +80,8 @@ services:
   minio:
     image: minio/minio:latest
     restart: unless-stopped
-    # Internal-only: no host port published. Browsers reach it via Caddy at
-    # https://<domain>/s3 (presigned URLs). Not exposed directly to the host.
+    # Internal-only: no host port published. The API reads/writes storage and
+    # proxies all media; browsers never reach MinIO directly.
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
