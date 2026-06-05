@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { Select } from '../ui/Select';
+import { RichText } from '../ui/RichText';
 
 type StepType = 'welcome' | 'consent' | 'preflight' | 'task' | 'finish';
 interface Step {
@@ -211,8 +212,13 @@ export function BuilderPage() {
                 <input value={s.title} onChange={(e) => patchStep(active, { title: e.target.value })} data-testid="step-title" />
               </div>
               <div className="field">
-                <label>Body (markdown)</label>
-                <textarea value={s.body_md} onChange={(e) => patchStep(active, { body_md: e.target.value })} data-testid="step-body" />
+                <label>Body</label>
+                <RichText
+                  value={s.body_md}
+                  onChange={(html) => patchStep(active, { body_md: html })}
+                  placeholder="Write the instructions for this step…"
+                  testId="step-body"
+                />
               </div>
               {s.type === 'preflight' && (
                 <div className="field">

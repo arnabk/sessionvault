@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { takeApi, applyBranding } from '../api';
+import { sanitizeHtml } from '../ui/RichText';
 
 type Phase = 'loading' | 'invalid' | 'welcome' | 'step' | 'finishing' | 'done';
 type CheckState = 'pending' | 'ok' | 'bad';
@@ -574,7 +575,12 @@ export function TakePage() {
 
           <span className="eyebrow">{step.type === 'preflight' ? 'Permissions' : step.type === 'consent' ? 'Before we begin' : step.type === 'finish' ? 'Final step' : 'Task'}</span>
           <h2 style={{ margin: '4px 0 0' }}>{step.title}</h2>
-          {step.body_md && <p className="take-prose">{step.body_md}</p>}
+          {step.body_md && (
+            <div
+              className="take-prose rt-content"
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(step.body_md) }}
+            />
+          )}
 
           {step.type === 'preflight' && !step.body_md && (
             <p className="take-prose">

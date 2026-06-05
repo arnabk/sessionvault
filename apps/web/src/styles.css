@@ -423,5 +423,39 @@ input[type="color"] { border: 1px solid var(--line-2); border-radius: 8px; curso
 }
 .usermenu button { justify-content: flex-start; text-align: left; width: 100%; white-space: nowrap; }
 
+/* ---------- Rich text editor ---------- */
+.rt { border: 1px solid var(--line-2); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+.rt-toolbar {
+  display: flex; flex-wrap: wrap; gap: 2px; padding: 6px;
+  border-bottom: 1px solid var(--line); background: var(--surface-2);
+}
+.rt-btn {
+  min-width: 30px; height: 28px; padding: 0 7px; font-size: 13px; font-weight: 600;
+  border: 1px solid transparent; background: transparent; color: var(--ink-2);
+  border-radius: 6px; box-shadow: none; line-height: 1;
+}
+.rt-btn:hover { background: var(--surface); border-color: var(--line-2); }
+.rt-editor {
+  min-height: 120px; max-height: 320px; overflow-y: auto; padding: 12px 14px;
+  outline: none; font-size: 14.5px; line-height: 1.6; color: var(--ink);
+}
+.rt-editor:empty::before { content: attr(data-placeholder); color: var(--faint); }
+.rt-editor:focus { box-shadow: inset 0 0 0 2px var(--brand-ring); }
+
+/* Rendered rich-text content (editor preview + taker) */
+.rt-content, .rt-editor { word-break: break-word; }
+.rt-content h1, .rt-content h2, .rt-content h3, .rt-content h4,
+.rt-editor h1, .rt-editor h2, .rt-editor h3, .rt-editor h4 { margin: 0.6em 0 0.3em; line-height: 1.25; }
+.rt-content ul, .rt-content ol, .rt-editor ul, .rt-editor ol { padding-left: 22px; margin: 0.4em 0; }
+.rt-content li, .rt-editor li { margin: 2px 0; }
+.rt-content a, .rt-editor a { color: var(--brand); }
+.rt-content blockquote, .rt-editor blockquote {
+  margin: 0.5em 0; padding: 6px 14px; border-left: 3px solid var(--line-2); color: var(--muted);
+}
+.rt-content pre, .rt-editor pre {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px;
+  padding: 10px 12px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 13px;
+}
+
 .fade-in { animation: fadeIn 0.28s ease both; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
